@@ -142,7 +142,7 @@ struct thread_param{
 
 int msg_counter = 0;
 
-int page_size = 4096;
+int dsm_page_size = 4096; // "page_size" is redeclared, think of a better name.
 
 void print_page_status(long addr){
 	PS_PRINTF("[Page Status] 0x%lx ST=%s owner=%d shared_owners=%d\n",addr,
@@ -345,8 +345,8 @@ static int uffd_int_get_page_data_from_remote(int pipe_fd,int pipe_fd_ack, long 
 	read(pipe_fd_ack,&page_owner_fd,sizeof(int));
 	
 	FT_PRINTF("ACK Recieved. page_owner_fd %d\n",(int)page_owner_fd);
-        while(data_read < page_size){
-                int ret = read((int)page_owner_fd,page_content+data_read,page_size);
+        while(data_read < dsm_page_size){
+                int ret = read((int)page_owner_fd,page_content+data_read,dsm_page_size);
                 FT_PRINTF("[FAULT] page data ret=%d\n",ret);
 		if(ret == -1 || ret == 0)
 			exit(0);
