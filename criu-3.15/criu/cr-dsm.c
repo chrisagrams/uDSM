@@ -376,8 +376,8 @@ static int get_page_data_from_remote(int pipe_fd,int pipe_fd_ack, long addr,unsi
 	int  page_owner_fd = 0;
 	read(pipe_fd_ack,&page_owner_fd,sizeof(int));
 	FT_PRINTF("ACK Recieved. page_owner_fd %d\n",(int)page_owner_fd);
-        while(data_read < page_size){
-                int ret = read((int)page_owner_fd,page_content+data_read,page_size);
+        while(data_read < dsm_page_size){
+                int ret = read((int)page_owner_fd,page_content+data_read,dsm_page_size);
                 FT_PRINTF("[FAULT] page data ret=%d\n",ret);
 		if(ret == -1)
 			exit(0);
@@ -481,7 +481,7 @@ static void *handler(void *arg)
 					struct uffdio_copy copy;
 					copy.src = (long long)page_content;
 					copy.dst = (long long)addr;
-					copy.len = page_size;
+					copy.len = dsm_page_size;
 					copy.mode =  0;
 					if (ioctl(p->uffd, UFFDIO_COPY, &copy) == -1) {
 						perror("ioctl/copy");
@@ -507,7 +507,7 @@ static void *handler(void *arg)
 				get_page_data_from_remote(p->pipe_fd, p->pipe_fd_ack,addr,page_content,is_write);
 				copy.src = (long long)page_content;
 				copy.dst = (long long)addr;
-				copy.len = page_size;
+				copy.len = dsm_page_size;
 				
 				copy.mode =  is_write ? 0: UFFDIO_COPY_MODE_WP;
 				if (ioctl(p->uffd, UFFDIO_COPY, &copy) == -1) {
@@ -851,8 +851,8 @@ void grab_and_forward_page(int *r_usock, int *r_msock,int page_owner,int remote_
 
 
 	send(r_msock[page_owner],&dsm_msg,sizeof(dsm_msg),0);
-	while(data_read < page_size){
-		int ret = read((int)r_msock[page_owner],page_content+data_read,page_size);
+	while(data_read < dsm_page_size){
+		int ret = read((int)r_msock[page_owner],page_content+data_read,dsm_page_size);
 		printf("[remote page read] page data ret=%d\n",ret);
 		if(ret == -1 || ret == 0)
 			exit(0);
