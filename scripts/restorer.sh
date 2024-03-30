@@ -1,7 +1,7 @@
 
 do_start_dsm_client(){
-	sudo killall -9 dsm_client
-	sudo ~/criu-dsm/criu-3.15/dsm_client/dsm_client listen 1 2>&1 > /dev/null
+	killall -9 dsm_client
+	~/criu-dsm/criu-3.15/dsm_client/dsm_client listen 1 2>&1 > /dev/null
 }
 
 while [ 1 ] ;
@@ -17,5 +17,5 @@ do
        cp ../aarch64/*.img . ;
 
        python3 ~/criu-dsm/scripts/thread_filter.py $node_id ;
-       sudo ~/criu-dsm/criu-3.15/criu/criu  restore -vvv --shell-job;
+       ~/criu-dsm/criu-3.15/criu/criu  restore -vvv --shell-job;
 done

@@ -1,3 +1,4 @@
+#include <argp.h>
 #include <assert.h>
 #include <dirent.h>
 #include <elf.h>
@@ -33,6 +34,7 @@
 #include "parsemap.h"
 #include "config.h"
 #include "dsm_log.h"
+
 
 #include "../criu/user.h"
 
@@ -97,6 +99,59 @@ enum page_state{
         PAGE_INVALID,
 };
 
+/* Configure argp */
+const char *argp_program_version = "1.0";
+const char *argp_program_bug_address = "cgrams2@uic.edu";
+static char doc[] = "A userspace DSM implementation utilizing CRIU and userfaultfd.";
+
+static char args_doc[] = "PID";
+
+static struct argp_option options[] = {
+    {"server-address", 'a', "ADDRESS", 0, "Address of the server"},
+    {"server-port", 'p', "PORT", 0, "Port of the server"},
+    {0}
+};
+
+struct arguments {
+    char *server_address;
+    int server_port;
+    int pid;
+};
+
+static error_t parse_opt(int key, char *arg, struct argp_state *state) {
+    struct arguments *arguments = state->input;
+
+    switch (key) {
+        case 'a':
+            arguments->server_address = arg;
+            break;
+        case 'p':
+            arguments->server_port = atoi(arg);
+            break;
+        case ARGP_KEY_ARG:
+            if (state->arg_num >= 1) {
+                /* Too many arguments. */
+                argp_usage(state);
+            }
+            arguments->pid = atoi(arg);
+            break;
+        case ARGP_KEY_END:
+            if (state->arg_num < 1) {
+                /* Not enough arguments. */
+                argp_usage(state);
+            }
+            if (arguments->server_address == NULL) {
+                fprintf(stderr, "A server address is required.\n");
+                argp_usage(state);
+            }
+            break;
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
+
+static struct argp argp = {options, parse_opt, args_doc, doc};
 
 volatile int fault_in_progress = 0;
 volatile long fault_in_progress_addr = 0;
@@ -174,7 +229,7 @@ int get_thread_ids(pid_t *thread_id, pid_t pid, size_t *entries, size_t max_size
 	return 0;
 }
 
-static int connect_page_data_server(){
+static int connect_page_data_server(char* server_address){
 
 	printf("connect_page_data_server\n");
 	int sock = 0, valread;
@@ -189,7 +244,7 @@ static int connect_page_data_server(){
 	// set server address
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(8081);
-	if(inet_pton(AF_INET, SERVER_ADDR, &serv_addr.sin_addr)<=0) {
+	if(inet_pton(AF_INET, server_address, &serv_addr.sin_addr)<=0) {
 		printf("\nInvalid address/ Address not supported \n");
 		return -1;
 	}
@@ -203,7 +258,7 @@ static int connect_page_data_server(){
 }
 
 
-static int connect_server(){
+static int connect_server(char* server_address){
 
 	int sock = 0, valread;
 	struct sockaddr_in serv_addr;
@@ -217,7 +272,7 @@ static int connect_server(){
 	// set server address
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(8080);
-	if(inet_pton(AF_INET, SERVER_ADDR, &serv_addr.sin_addr)<=0) {
+	if(inet_pton(AF_INET, server_address, &serv_addr.sin_addr)<=0) {
 		printf("\nInvalid address/ Address not supported \n");
 		return -1;
 	}
@@ -948,43 +1003,44 @@ static int do_infection(int pid ,int sock)
 
 int main(int argc, char **argv)
 {
-	int pid,sock;
-	int uffd;
+	struct arguments arguments;
+	int uffd, sock;
 
-	if(argc < 2){
-		printf("Usage: %s <pid>\n",argv[0]);
-	}
+	argp_parse(&argp, argc, argv, 0, 0, &arguments);
+	
+	printf("PID = %d\n", arguments.pid);
+    printf("Server Address = %s\n", arguments.server_address);
+    printf("Server Port = %d\n", arguments.server_port);
 
-	if(argc == 3)
-	{
-		char msg[25];
-		int fd = open("/tmp/pipe_client", O_RDONLY);
-		read(fd, msg, sizeof(msg));
-		printf("FIFO: %s\n", msg);
-		pid = atoi(msg);
-		close(fd);
 
-	}
-	else{
-		pid = atoi(argv[1]);
-	}
+	// I don't know what this is...
+	// if(argc == 3)
+	// {
+	// 	char msg[25];
+	// 	int fd = open("/tmp/pipe_client", O_RDONLY);
+	// 	read(fd, msg, sizeof(msg));
+	// 	printf("FIFO: %s\n", msg);
+	// 	pid = atoi(msg);
+	// 	close(fd);
+
+	// }
 
 	g_create_rand_socket_id=1;
 
 	/*Get VMA Areas*/
-	maps = pmparser_parse(pid);
+	maps = pmparser_parse(arguments.pid);
 
 	/*Connect to page Servers*/
-	sock = connect_server();
+	sock = connect_server(arguments.server_address);
 	sleep(1);
-	page_data_socket = connect_page_data_server();
+	page_data_socket = connect_page_data_server(arguments.server_address);
 	get_page_list_from_origin(sock);
 	
 	/*Register UFFD with parasite and start UFFD Thread*/
-	uffd = do_infection(pid,sock);
+	uffd = do_infection(arguments.pid, sock);
 
 	/*Start Page server */
-	listen_for_commands(sock,pid,uffd);
+	listen_for_commands(sock, arguments.pid, uffd);
 	
 	pthread_join(uffd_thread, NULL);
 	

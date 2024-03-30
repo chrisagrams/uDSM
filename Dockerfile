@@ -8,7 +8,7 @@
 #	ubuntu2204:criu make -C /code
 ##
 
-FROM ubuntu:jammy
+FROM --platform=linux/amd64 ubuntu:jammy
 
 RUN apt-get update -y && apt install -y --no-install-recommends \
 	libprotobuf-dev libprotobuf-c-dev protobuf-c-compiler \
@@ -17,3 +17,6 @@ RUN apt-get update -y && apt install -y --no-install-recommends \
 	python3-future libnet1-dev libnftables-dev libgnutls28-dev \
 	gcc make
 
+COPY . ./code
+
+RUN make -C /code -j4
