@@ -8,7 +8,7 @@
 #	ubuntu2204:criu make -C /code
 ##
 
-FROM --platform=linux/amd64 ubuntu:jammy
+FROM ubuntu:jammy
 
 RUN apt-get update -y && apt install -y --no-install-recommends \
 	libprotobuf-dev libprotobuf-c-dev protobuf-c-compiler \

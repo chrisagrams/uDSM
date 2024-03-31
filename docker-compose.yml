@@ -1,0 +1,9 @@
+version: '3.4'
+
+services:
+  uDSM-server:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    pid: "host" # Use host PID mode, allows sharing between container and host PID address space.
+      

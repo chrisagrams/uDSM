@@ -1016,12 +1016,12 @@ int main(int argc, char **argv)
 	// I don't know what this is...
 	// if(argc == 3)
 	// {
-	// 	char msg[25];
-	// 	int fd = open("/tmp/pipe_client", O_RDONLY);
-	// 	read(fd, msg, sizeof(msg));
-	// 	printf("FIFO: %s\n", msg);
-	// 	pid = atoi(msg);
-	// 	close(fd);
+	// char msg[25];
+	// int fd = open("/tmp/pipe_client", O_RDONLY);
+	// read(fd, msg, sizeof(msg));
+	// printf("FIFO: %s\n", msg);
+	// int pid = atoi(msg);
+	// close(fd);
 
 	// }
 
